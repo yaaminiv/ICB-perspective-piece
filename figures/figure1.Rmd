@@ -1,0 +1,198 @@
+---
+title: "figure-1"
+author: "Yaamini Venkataraman"
+date: "2025-05-05"
+output: html_document
+---
+
+In this script, I will create a multipanel figure characterizing the different kinds of metabolomics and lipidomics studies that examine metabolic plasticity in marine invertebrates.
+
+# Set up R Markdown document
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = normalizePath(".")) #Set root directory
+```
+
+```{r}
+getwd()
+```
+
+#Install packages
+
+```{r, warnings = FALSE}
+#install.packages("tidyverse")
+#install.packages("RColorBrewer")
+#install.packages("patchwork")
+require(tidyverse)
+require(RColorBrewer)
+require(patchwork)
+```
+
+```{r}
+sessionInfo()
+```
+
+# Import data
+
+```{r}
+metadata <- read.csv("../metadata/2025-metabolomics-lipidomics-studies.csv", header = TRUE, col.names = c("Year", "Author", "Title", "Species", "Phyllum", "Stressor", "Method", "dataAcquisition", "Platform", "Type", "statisticalMethods", "enrichmentMethod", "physTraits", "otherOmicMethods", "integrativeAnalysis", "takeHomes", "Abstract", "DOI", "Source")) %>%
+  dplyr::select(-c(takeHomes, Abstract, DOI, Source))#Import study information. Change column names to be simple where appropriate. Remove columns that will not be used for figures
+head(metadata)
+```
+
+# Make figures
+
+## Panel A
+
+Panel A will show the increase in studies over time.
+
+```{r}
+panelAPlot <- metadata %>%
+  dplyr::select(Year, Author, Method) %>%
+  unique(.) %>%
+  arrange(Year) %>%
+  group_by(Method) %>%
+  mutate(cumulative_count = row_number()) %>%
+  ggplot(., aes(x = Year, y = cumulative_count, color = Method, linetype = Method)) +
+  geom_line(linewidth = 0.75) +
+  scale_y_continuous(name = "Number of Papers",
+                     breaks = c(seq(0,10,5),
+                                seq(20,60,20))) +
+  scale_color_manual(values = c("orange", "lightskyblue")) +
+  scale_linetype_manual(values = c("longdash", "solid")) +
+  ggtitle("A. Publishing Trends over Time") +
+  theme_classic(base_size = 15)
+panelAPlot
+```
+
+## Panel B
+
+I will use a pie chart to breakdown the number of studies that use untargeted, semi-targeted, or targeted data acquisition methods. I will also create a pie chart that examines steady state vs. metabolic flux studies.
+
+```{r}
+panelBPlot1 <- metadata %>%
+  dplyr::select(Year, Author, dataAcquisition) %>%
+  unique(.) %>%
+  mutate(., dataAcquisition = gsub(pattern = "\\s*\\([^\\)]+\\)", replacement = "", x = dataAcquisition)) %>%
+  mutate(., dataAcquisition = gsub(pattern = ", analyzed only those identified in database", replacement = "", x = dataAcquisition)) %>%
+  mutate(., dataAcquisition = gsub(pattern = " ", replacement = "", x = dataAcquisition)) %>%
+  group_by(., dataAcquisition) %>%
+  summarize(., count = n()) %>%
+  ggplot(mapping = aes(x = "", y = count, fill = dataAcquisition)) +
+  geom_col(color = "black") +
+  coord_polar(theta = "y") +
+  scale_fill_manual(name = "",
+                    values = brewer.pal(3, "Greys")) +
+  ggtitle("B. Data Acquisition Methods") +
+  theme_void(base_size = 15)
+panelBPlot1
+```
+
+```{r}
+panelBPlot2 <- metadata %>%
+  filter(., Method == "Metabolomics") %>%
+  dplyr::select(Year, Author, Type) %>%
+  unique(.) %>%
+  group_by(., Type) %>%
+  summarize(., count = n()) %>%
+  ggplot(mapping = aes(x = "", y = count, fill = Type)) +
+  geom_col(color = "black") +
+  coord_polar(theta = "y") +
+  scale_fill_manual(name = "",
+                    labels = c("31P", "13C", "15N", "Steady state"),
+                    values = brewer.pal(4, "Greys")) +
+  theme_void(base_size = 15)
+panelBPlot2
+```
+
+## Panel C
+
+In this panel I want to highlight studies that integrated metabolomics and lipidomics with other methods.
+
+```{r}
+intStudyTable <- metadata %>%
+  dplyr::select(Year, Author, Method, otherOmicMethods) %>%
+  unique(.) %>%
+  pivot_longer(., cols = Method:otherOmicMethods,
+               values_to = "Method") %>%
+  dplyr::select(-name) %>%
+  separate(., col = Method, into = c("Method", "Method2", "Method3"), sep = ", ") %>%
+  pivot_longer(., cols = Method:Method3,
+               values_to = "Method") %>%
+  dplyr::select(-name) %>%
+  filter(., is.na(Method) == FALSE) %>%
+  filter(., Method != "None") %>%
+  mutate(., Method = gsub(pattern = "16S microbial diversity", replacement = "Microbiome", x = Method)) %>%
+  mutate(., Method = gsub(pattern = "16s microbial diversity", replacement = "Microbiome", x = Method)) %>%
+  mutate(., Method = gsub(pattern = "Microbiome", replacement = "Microbiome", x = Method)) %>%
+  mutate(., Method = gsub(pattern = "ITS2 microbiome", replacement = "Microbiome", x = Method)) %>%
+  mutate(., Method = gsub(pattern = "ITS2 sequencing", replacement = "Microbiome", x = Method)) %>%
+  mutate(., Method = gsub(pattern = "DNA methylation", replacement = "Epigenomics", x = Method)) %>%
+  mutate(., Method = gsub(pattern = "Histone PTM", replacement = "Epigenomics", x = Method)) %>%
+  mutate(., Method = gsub(pattern = "transcriptome", replacement = "Transcriptomics", x = Method)) %>%
+  mutate(., Method = gsub(pattern = "RT-qPCR", replacement = "Transcriptomics", x = Method)) %>%
+  mutate(., used = "Y") %>%
+  pivot_wider(., names_from = "Method", values_from = "used", values_fill = "N") %>%
+  dplyr::select(Year:Metabolomics, Lipidomics, Transcriptomics, Microbiome, Epigenomics, Proteomics)
+#Take metadata and pivot table such that all method information is in one column. Separate entries with multiple methods into different columns, then pivot. Add a column indicating that particular method was used. Pivot dataframe wider, filling in "N" for "NA".
+head(intStudyTable)
+```
+
+"Metabolomics", "Lipidomics",
+"Transcriptomics", "Epigenomics", "Microbiome", "Proteomics",
+"None"),
+
+```{r}
+intStudySummary <- cbind((intStudyTable %>%
+                            filter(., Metabolomics == "Y") %>%
+                            dplyr::select(-c(Year, Author)) %>%
+                            summarize(., "1metaboliteY" = sum(Metabolomics == "Y"),
+                                      "2lipidY" = sum(Lipidomics == "Y"),
+                                      "3transcriptY" = sum(Transcriptomics == "Y"),
+                                      "5microbiomeY" = sum(Microbiome == "Y"),
+                                      "4epigenomeY" = sum(Epigenomics == "Y"),
+                                      "6proteinY" = sum(Proteomics == "Y"),
+                                      "7noInt" = sum(Lipidomics == "N" & Transcriptomics == "N" & Microbiome == "N" & Epigenomics == "N" & Proteomics == "N")) %>%
+                            t(.) %>% as.data.frame(.)),
+                         (intStudyTable %>%
+                            filter(., Lipidomics == "Y") %>%
+                            dplyr::select(-c(Year, Author)) %>%
+                            summarize(., "1metaboliteY" = sum(Metabolomics == "Y"),
+                                      "2lipidY" = sum(Lipidomics == "Y"),
+                                      "3transcriptY" = sum(Transcriptomics == "Y"),
+                                      "5microbiomeY" = sum(Microbiome == "Y"),
+                                      "4epigenomeY" = sum(Epigenomics == "Y"),
+                                      "6proteinY" = sum(Proteomics == "Y"),
+                                      "7noInt" = sum(Metabolomics == "N" & Transcriptomics == "N" & Microbiome == "N" & Epigenomics == "N" & Proteomics == "N")) %>%
+                            t(.) %>% as.data.frame(.))) #Count the number of metabolomics or lipidomics studies that use other methods, and use cbind to combine.
+colnames(intStudySummary) <- c("Metabolomics", "Lipidomics") #Change column names
+intStudySummary$Metabolomics[1] <- NA #Change number of metabolomics studies to NA
+intStudySummary$Lipidomics[2] <- NA #Change number of lipidomics studies to NA
+intStudySummary #Confirm changes
+```
+
+```{r}
+panelCPlot <- intStudySummary %>%
+  rownames_to_column(var = "intMethod") %>%
+  pivot_longer(., cols = Metabolomics:Lipidomics, names_to = "method", values_to = "count") %>%
+  ggplot(., aes(x = method, y = count, fill = intMethod)) +
+  geom_bar(stat = "identity", position = "fill", color = "black") +
+  labs(x = "", y = "Percent of Studies") +
+  scale_fill_manual(name = "",
+                    labels = c("Metabolomics", "Lipidomics",
+                               "Transcriptomics", "Epigenomics", "Microbiome", "Proteomics",
+                               "None"),
+                    values = brewer.pal(7, "Blues")) +
+  ggtitle("C. Integrative Molecular Method Used") +
+  theme_classic(base_size = 15)
+panelCPlot
+```
+
+# Combine figures
+
+```{r}
+panelAPlot / (panelBPlot1 | panelBPlot2) / panelCPlot
+ggsave("figure1.pdf", height = 11, width = 8.5)
+```
+
