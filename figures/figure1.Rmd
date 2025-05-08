@@ -56,7 +56,7 @@ panelAPlot <- metadata %>%
   mutate(cumulative_count = row_number()) %>%
   ggplot(., aes(x = Year, y = cumulative_count, color = Method, linetype = Method)) +
   geom_line(linewidth = 0.75) +
-  scale_y_continuous(name = "Number of Papers",
+  scale_y_continuous(name = "Cumulative Publications",
                      breaks = c(seq(0,10,5),
                                 seq(20,60,20))) +
   scale_x_continuous(breaks = seq(1990, 2025, 5)) +
@@ -122,6 +122,18 @@ panelBPlot2
 ## Panel C
 
 In this panel I want to highlight studies that integrated metabolomics and lipidomics with other methods.
+
+```{r}
+metadata %>%
+  dplyr::select(Year, Author, Method, otherOmicMethods) %>%
+  unique(.) %>%
+  pivot_longer(., cols = Method:otherOmicMethods,
+               values_to = "Method") %>%
+  dplyr::select(-name) %>%
+  separate(., col = Method, into = c("Method", "Method2", "Method3"), sep = ", ")
+#Only Rodfriguez-Casariego et al. 2024 (Methylation, transcriptome, microbiome, lipidomics) and Wei et al. 2015 (metabolomics, proteomics, and transcriptome) used two methods additional methods
+```
+
 
 ```{r}
 intStudyTable <- metadata %>%
