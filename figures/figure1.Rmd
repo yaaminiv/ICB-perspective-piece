@@ -37,7 +37,7 @@ sessionInfo()
 
 ```{r}
 metadata <- read.csv("../metadata/2025-metabolomics-lipidomics-studies.csv", header = TRUE, col.names = c("Year", "Author", "Title", "Species", "Phyllum", "Stressor", "Method", "dataAcquisition", "Platform", "Type", "statisticalMethods", "enrichmentMethod", "physTraits", "otherOmicMethods", "integrativeAnalysis", "takeHomes", "Abstract", "DOI", "Source")) %>%
-  dplyr::select(-c(takeHomes, Abstract, DOI, Source))#Import study information. Change column names to be simple where appropriate. Remove columns that will not be used for figures
+  dplyr::select(-c(takeHomes, Abstract, DOI))#Import study information. Change column names to be simple where appropriate. Remove columns that will not be used for figures
 head(metadata)
 ```
 
@@ -252,3 +252,13 @@ metadata %>%
   summarize(count = n())
 #27 no phys, 41 phys
 ```
+
+```{r}
+metadata %>%
+  dplyr::select(Year, Author, Source) %>%
+  unique(.) %>%
+  group_by(Source) %>%
+  summarize(count = n())
+#Both: 17, Manual: 27, ProQuest: 5, Web of Science: 19
+```
+
