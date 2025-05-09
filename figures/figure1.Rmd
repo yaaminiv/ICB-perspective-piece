@@ -59,29 +59,42 @@ panelAPlot <- metadata %>%
   scale_y_continuous(name = "Cumulative Publications",
                      breaks = c(seq(0,10,5),
                                 seq(20,60,20))) +
-  scale_x_continuous(breaks = seq(1990, 2025, 5)) +
+  scale_x_continuous(limits = c(1990, 2025),
+                     breaks = seq(1990, 2025, 5)) +
   scale_color_manual(values = c("orange", "lightskyblue")) +
   scale_linetype_manual(values = c("longdash", "solid")) +
-  ggtitle("A. Publishing Trends Over Time") +
-  theme_classic(base_size = 15)
+  ggtitle("A. Publishing Trends") +
+  theme_classic(base_size = 15) + theme(axis.text.x = element_text(angle = 90,
+                                                                   vjust = 0.7))
 panelAPlot
 ```
 
 ```{r}
-metadata %>%
-  dplyr::select(Year, Author, Method) %>%
+panelAPlot2 <- metadata %>%
+  dplyr::select(Year, Author, Method, Phyllum) %>%
   unique(.) %>%
+  filter(., Phyllum != "Annelid" & Phyllum != "Brachiopod" & Phyllum != "Bryzoan") %>%
   arrange(Year) %>%
-  group_by(Method) %>%
+  group_by(Method, Phyllum) %>%
   mutate(cumulative_count = row_number()) %>%
   ggplot(., aes(x = Year, y = cumulative_count, color = Method, linetype = Method)) +
   geom_line(linewidth = 0.75) +
-  scale_y_continuous(name = "Cumulative Publications") +
-  scale_x_continuous(breaks = seq(1990, 2025, 5)) +
+  facet_wrap(~ Phyllum) +
+  scale_y_continuous(name = "",
+                     breaks = c(seq(0,30,10))) +
+  scale_x_continuous(limits = c(1993, 2025),
+                     breaks = c(1993, 2025)) +
   scale_color_manual(values = c("orange", "lightskyblue")) +
   scale_linetype_manual(values = c("longdash", "solid")) +
-  ggtitle("A. Publishing Trends Over Time") +
-  theme_classic(base_size = 15)
+  theme_classic(base_size = 15) + theme(strip.background = element_rect(color = "white"),
+                                        axis.text.x = element_text(angle = 90,
+                                                                   vjust = 0.7))
+panelAPlot2
+```
+
+```{r}
+panelAFull <- panelAPlot + panelAPlot2 + plot_layout(guides = "collect")
+panelAFull
 ```
 
 
@@ -231,13 +244,22 @@ panelCPlot
 # Combine figures
 
 ```{r}
-panelAPlot / (panelBPlot1 | panelBPlot2) / panelCPlot
+panelAFull / (panelBPlot1 | panelBPlot2) / panelCPlot
 ggsave("figure1.pdf", height = 11, width = 8.5)
 ```
 
 # Count information
 
-I also want to count the number of studies that used various enrichment methods so I can put that information in the manuscript.
+I also want to count the number of studies based on various parameters to include in the text.
+
+```{r}
+metadata %>%
+  dplyr::select(Year, Author, Method, Phyllum) %>%
+  unique(.) %>%
+  group_by(Phyllum) %>%
+  summarize(count = n())
+#2 annelid, 1 brachiopod, 1 bryxoan, 17 cnidarian, 13 crustacean, 5 echinoderm, 37 mollusc
+```
 
 ```{r}
 metadata %>%
