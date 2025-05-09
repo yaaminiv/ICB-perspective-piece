@@ -67,6 +67,24 @@ panelAPlot <- metadata %>%
 panelAPlot
 ```
 
+```{r}
+metadata %>%
+  dplyr::select(Year, Author, Method) %>%
+  unique(.) %>%
+  arrange(Year) %>%
+  group_by(Method) %>%
+  mutate(cumulative_count = row_number()) %>%
+  ggplot(., aes(x = Year, y = cumulative_count, color = Method, linetype = Method)) +
+  geom_line(linewidth = 0.75) +
+  scale_y_continuous(name = "Cumulative Publications") +
+  scale_x_continuous(breaks = seq(1990, 2025, 5)) +
+  scale_color_manual(values = c("orange", "lightskyblue")) +
+  scale_linetype_manual(values = c("longdash", "solid")) +
+  ggtitle("A. Publishing Trends Over Time") +
+  theme_classic(base_size = 15)
+```
+
+
 ## Panel B
 
 I will use a pie chart to breakdown the number of studies that use untargeted, semi-targeted, or targeted data acquisition methods. I will also create a pie chart that examines steady state vs. metabolic flux studies.
